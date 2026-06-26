@@ -1,4 +1,4 @@
-import { LitElement, html, nothing } from 'lit';
+import { LitElement, html, nothing, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { sharedStyles } from '../styles/shared';
 import type { HomeAssistant, ResolvedPie } from '../config/types';
@@ -29,7 +29,11 @@ export class InvestmentPieRow extends LitElement {
   @property({ attribute: false }) pie!: ResolvedPie;
   @property({ type: Boolean }) expanded = false;
 
-  static styles = [sharedStyles];
+  static styles = [sharedStyles, css`
+    :host .list-item {
+      grid-template-columns: 1fr auto auto;
+    }
+  `];
 
   private _toggle() {
     this.dispatchEvent(new CustomEvent('toggle-expand', { bubbles: true, composed: true }));
@@ -47,7 +51,7 @@ export class InvestmentPieRow extends LitElement {
           </div>
         </div>
         <div class="item-value">${fmt(hass, p.value)}</div>
-        <div class="item-pnl ${pnlCls(hass, p.pnl_percent)}">${fmt(hass, p.pnl_percent)}%</div>
+        <div class="item-pnl ${pnlCls(hass, p.pnl_percent)}">${fmt(hass, p.pnl_percent) === '—' ? '—' : `${fmt(hass, p.pnl_percent)}%`}</div>
       </div>
       ${this.expanded ? html`
         <div class="expand-panel">

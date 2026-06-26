@@ -42,9 +42,9 @@ export class InvestmentPositionRow extends LitElement {
         <div class="item-value">${fmt(hass, p.value)}</div>
         <div class="item-pnl ${pnlCls(hass, p.pnl)}">
           ${fmt(hass, p.pnl)}<br/>
-          <span style="font-size:0.75rem">${fmt(hass, p.pnl_percent)}%</span>
+          <span style="font-size:0.75rem">${fmt(hass, p.pnl_percent) === '—' ? '—' : `${fmt(hass, p.pnl_percent)}%`}</span>
         </div>
-        <investment-sparkline .hass=${hass} entityId=${p.history_entity}></investment-sparkline>
+        <investment-sparkline .hass=${hass} .entityId=${p.history_entity}></investment-sparkline>
       </div>
       ${this.expanded ? html`
         <div class="expand-panel">
@@ -60,7 +60,7 @@ export class InvestmentPositionRow extends LitElement {
             <span class="expand-label">Current Price</span>
             <span class="expand-value">${fmt(hass, p.current_price)}</span>
           </div>
-          <investment-sparkline .hass=${hass} entityId=${p.history_entity} wide></investment-sparkline>
+          <investment-sparkline .hass=${hass} .entityId=${p.history_entity} wide></investment-sparkline>
         </div>` : nothing}
     `;
   }

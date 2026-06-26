@@ -46,8 +46,8 @@ export class InvestmentOverviewCard extends LitElement {
     const botPct = botEntity?.attributes?.change_pct as number | undefined;
 
     // Compute CSS classes based on actual sign of change values
-    const topChangeClass = topVal != null && topVal >= 0 ? 'positive' : 'negative';
-    const botChangeClass = botVal != null && botVal >= 0 ? 'positive' : 'negative';
+    const topChangeClass = topVal == null ? '' : topVal >= 0 ? 'positive' : 'negative';
+    const botChangeClass = botVal == null ? '' : botVal >= 0 ? 'positive' : 'negative';
 
     // Compute sign prefixes: '+' only for positive values
     const topSignPrefix = topVal != null && topVal >= 0 ? '+' : '';

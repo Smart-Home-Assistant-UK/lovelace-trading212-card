@@ -14,14 +14,28 @@ export class InvestmentSparkline extends LitElement {
   @property({ type: Boolean }) wide = false;
 
   @state() private _points: number[] = [];
+  private _timer: ReturnType<typeof setInterval> | null = null;
 
   static styles = css`
     :host { display: block; }
     svg { display: block; }
   `;
 
+  connectedCallback() {
+    super.connectedCallback();
+    this._timer = setInterval(() => this._fetchHistory(), 3600000);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._timer !== null) {
+      clearInterval(this._timer);
+      this._timer = null;
+    }
+  }
+
   updated(changed: PropertyValues) {
-    if (changed.has('entityId') || changed.has('hass')) {
+    if (changed.has('entityId')) {
       this._fetchHistory();
     }
   }
