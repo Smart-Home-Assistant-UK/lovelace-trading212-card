@@ -18,9 +18,13 @@ A Lovelace custom card for [Home Assistant](https://www.home-assistant.io/) that
 
 ### Via HACS (recommended)
 
-1. Open HACS → **Frontend → Explore & Download Repositories**
-2. Search for **Trading212 Card** and install
-3. Reload your browser
+This card is not yet in the default HACS catalogue, so you need to add it as a custom repository first:
+
+1. Open HACS → **Frontend**
+2. Click the three-dot menu (⋮) → **Custom repositories**
+3. Enter `https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card` and set category to **Plugin**
+4. Click **Add**, then find **Trading212 Lovelace Card** in the list and install it
+5. Reload your browser
 
 ### Manual
 
