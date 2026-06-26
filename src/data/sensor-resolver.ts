@@ -33,6 +33,11 @@ function resolveAccountSensors(prefix: string): ResolvedAccountSensors {
   };
 }
 
+function isAvailable(states: Record<string, HassEntity>, entityId: string): boolean {
+  const s = states[entityId];
+  return !!s && s.state !== 'unavailable' && s.state !== 'unknown';
+}
+
 function discoverPositions(
   prefix: string,
   states: Record<string, HassEntity>
@@ -41,7 +46,7 @@ function discoverPositions(
   const slugs: string[] = [];
   for (const entityId of Object.keys(states)) {
     const match = entityId.match(pattern);
-    if (match) slugs.push(match[1]);
+    if (match && isAvailable(states, `${prefix}${match[1]}_value`)) slugs.push(match[1]);
   }
   return slugs.map((slug) => ({
     name: slugToName(slug),
@@ -64,7 +69,7 @@ function discoverPies(
   const slugs: string[] = [];
   for (const entityId of Object.keys(states)) {
     const match = entityId.match(pattern);
-    if (match && match[1]) slugs.push(match[1]);
+    if (match && match[1] && isAvailable(states, `${prefix}${match[1]}_value`)) slugs.push(match[1]);
   }
   return slugs.map((slug) => ({
     name: slugToName(slug),

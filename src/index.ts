@@ -2,9 +2,12 @@ import './cards/overview-card';
 import './cards/positions-card';
 import './cards/pies-card';
 import './cards/portfolio-card';
+import './cards/health-card';
 
 (window as any).customCards = (window as any).customCards ?? [];
 (window as any).customCards.push(
+  { type: 'investment-health-card', name: 'Investment Health',
+    description: 'Portfolio value, 7-day trend, today\'s P&L, and movers at a glance' },
   { type: 'investment-portfolio-card', name: 'Investment Portfolio',
     description: 'Full portfolio view: overview, positions, and pies' },
   { type: 'investment-overview-card', name: 'Investment Overview',

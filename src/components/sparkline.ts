@@ -12,6 +12,8 @@ export class InvestmentSparkline extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ type: String }) entityId = '';
   @property({ type: Boolean }) wide = false;
+  @property({ type: Number }) width = 0;
+  @property({ type: Number }) height = 0;
 
   @state() private _points: number[] = [];
   private _timer: ReturnType<typeof setInterval> | null = null;
@@ -74,8 +76,8 @@ export class InvestmentSparkline extends LitElement {
 
   render() {
     if (this._points.length < 2) return nothing;
-    const w = this.wide ? 200 : 60;
-    const h = this.wide ? 60 : 28;
+    const w = this.width || (this.wide ? 200 : 60);
+    const h = this.height || (this.wide ? 60 : 28);
     const path = this._buildPath(w, h);
     const up = this._points[this._points.length - 1] >= this._points[0];
     const stroke = up ? 'var(--success-color, #4caf50)' : 'var(--error-color, #f44336)';
