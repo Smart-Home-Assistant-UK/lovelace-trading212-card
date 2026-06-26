@@ -45,6 +45,14 @@ export class InvestmentOverviewCard extends LitElement {
     const botVal = botEntity?.attributes?.change_value as number | undefined;
     const botPct = botEntity?.attributes?.change_pct as number | undefined;
 
+    // Compute CSS classes based on actual sign of change values
+    const topChangeClass = topVal != null && topVal >= 0 ? 'positive' : 'negative';
+    const botChangeClass = botVal != null && botVal >= 0 ? 'positive' : 'negative';
+
+    // Compute sign prefixes: '+' only for positive values
+    const topSignPrefix = topVal != null && topVal >= 0 ? '+' : '';
+    const botSignPrefix = botVal != null && botVal >= 0 ? '+' : '';
+
     return html`
       <ha-card>
         <div class="stat-grid">
@@ -60,15 +68,15 @@ export class InvestmentOverviewCard extends LitElement {
         <div class="mover-row">
           <div class="mover-chip">
             <div class="mover-label">Top Mover</div>
-            <div class="mover-name positive">${topEntity?.state ?? '—'}</div>
-            ${topPct != null ? html`<div class="mover-change positive">
-              +${topVal?.toFixed(2)} (${topPct.toFixed(2)}%)</div>` : nothing}
+            <div class="mover-name ${topChangeClass}">${topEntity?.state ?? '—'}</div>
+            ${topVal != null && topPct != null ? html`<div class="mover-change ${topChangeClass}">
+              ${topSignPrefix}${topVal.toFixed(2)} (${topPct.toFixed(2)}%)</div>` : nothing}
           </div>
           <div class="mover-chip">
             <div class="mover-label">Bottom Mover</div>
-            <div class="mover-name negative">${botEntity?.state ?? '—'}</div>
-            ${botPct != null ? html`<div class="mover-change negative">
-              ${botVal?.toFixed(2)} (${botPct.toFixed(2)}%)</div>` : nothing}
+            <div class="mover-name ${botChangeClass}">${botEntity?.state ?? '—'}</div>
+            ${botVal != null && botPct != null ? html`<div class="mover-change ${botChangeClass}">
+              ${botSignPrefix}${botVal.toFixed(2)} (${botPct.toFixed(2)}%)</div>` : nothing}
           </div>
         </div>
       </ha-card>`;
