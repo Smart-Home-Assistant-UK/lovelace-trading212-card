@@ -52,6 +52,7 @@ Or via **Settings → Dashboards → Resources → Add Resource**.
 | Overview | `investment-overview-card` | Account stat grid and daily movers |
 | Positions | `investment-positions-card` | Scrollable positions list with sparklines |
 | Pies | `investment-pies-card` | Scrollable pies list |
+| Allocation | `investment-allocation-card` | Squarified treemap showing portfolio weight and P&L |
 
 ---
 
@@ -65,6 +66,25 @@ type: custom:investment-health-card
 
 ```yaml
 type: custom:investment-portfolio-card
+```
+
+```yaml
+type: custom:investment-allocation-card
+```
+
+The allocation card supports three modes via the `mode` and `pie` options:
+
+```yaml
+# All positions (default)
+type: custom:investment-allocation-card
+
+# Positions within a specific pie (use the pie's slug — lowercase, spaces → underscores)
+type: custom:investment-allocation-card
+pie: thematic
+
+# Pies overview — each block is one pie
+type: custom:investment-allocation-card
+mode: pies
 ```
 
 **Custom sensor prefix** — for any integration following the same naming convention:
@@ -99,6 +119,9 @@ positions:
 | `show_overview` | `true` | Portfolio | Show the overview section |
 | `show_positions` | `true` | Portfolio | Show the positions section |
 | `show_pies` | `true` | Portfolio | Show the pies section |
+| `mode` | `positions` | Allocation | `positions` (all positions) or `pies` (one block per pie) |
+| `pie` | — | Allocation | Pie slug to filter positions to a single pie (e.g. `thematic`) |
+| `treemap_height` | `420` | Allocation | Height of the treemap in pixels |
 
 ---
 
@@ -117,6 +140,12 @@ positions:
 | Pies | Pies expanded |
 |------|---------------|
 | ![Pies](docs/screenshots/default/pies-card.png) | ![Pies expanded](docs/screenshots/default/pies-card-expanded.png) |
+
+### Allocation card
+
+All three modes side by side — pies overview, positions filtered to one pie, and all positions globally:
+
+![Allocation card](docs/screenshots/default/allocation-card.png)
 
 ### iOS dark theme
 
