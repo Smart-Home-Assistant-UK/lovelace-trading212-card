@@ -3,3 +3,4 @@ dist/
 !dist/investment-card.js
 storybook-static/
 *.local
+.idea
