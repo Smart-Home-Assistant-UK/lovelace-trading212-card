@@ -78,20 +78,13 @@ The allocation card supports three modes via the `mode` and `pie` options:
 # All positions (default)
 type: custom:investment-allocation-card
 
-# Positions within a specific pie (use the pie's slug — lowercase, spaces → underscores)
+# Positions within a specific pie (see slug convention below)
 type: custom:investment-allocation-card
 pie: thematic
 
 # Pies overview — each block is one pie
 type: custom:investment-allocation-card
 mode: pies
-```
-
-**Custom sensor prefix** — for any integration following the same naming convention:
-
-```yaml
-type: custom:investment-positions-card
-prefix: sensor.my_broker_
 ```
 
 **Explicit sensor mapping** — full control for any sensor source:
@@ -110,17 +103,69 @@ positions:
 
 ---
 
+## Multiple accounts
+
+The Trading212 integration supports multiple accounts side by side (e.g. yours and a partner's). When you add a second integration entry you are prompted to set an **Account Label** — a short name such as `John` or `Jane`. This label is turned into a slug (lowercase, spaces replaced with underscores) and inserted into every entity ID:
+
+| Label | Resulting prefix |
+|-------|-----------------|
+| *(none)* | `sensor.trading212_` |
+| `John` | `sensor.trading212_john_` |
+| `Jane` | `sensor.trading212_jane_` |
+
+Point each card at the right account by setting `prefix`:
+
+```yaml
+# John's account
+type: custom:investment-health-card
+prefix: sensor.trading212_john_
+
+# Jane's account
+type: custom:investment-health-card
+prefix: sensor.trading212_jane_
+```
+
+Every card option that accepts a slug (such as `pie`) is relative to the prefix, so no other changes are needed.
+
+---
+
+## Entity slug convention
+
+The integration converts instrument tickers and pie names into slugs for use in entity IDs: **all lowercase, with any non-alphanumeric character replaced by an underscore**.
+
+| Name | Slug |
+|------|------|
+| `VWRL_EQ` | `vwrl_eq` |
+| `Thematic` | `thematic` |
+| `Aggressive but safe` | `aggressive_but_safe` |
+| `U.S. Tech` | `u_s_tech` |
+
+This matters when using the `pie` option on the allocation card — you must supply the slug form, not the display name:
+
+```yaml
+# Pie named "Aggressive but safe"
+type: custom:investment-allocation-card
+pie: aggressive_but_safe
+
+# Combined with a label prefix
+type: custom:investment-allocation-card
+prefix: sensor.trading212_john_
+pie: aggressive_but_safe
+```
+
+---
+
 ## Configuration
 
 | Option | Default | Cards | Description |
 |--------|---------|-------|-------------|
-| `prefix` | `sensor.trading212_` | All | Sensor entity prefix for auto-discovery |
+| `prefix` | `sensor.trading212_` | All | Sensor entity prefix for auto-discovery. Must end with `_`. Set this when using multiple accounts — see [Multiple accounts](#multiple-accounts). |
 | `max_height` | `400px` | Positions, Pies | Max height of scrollable lists |
 | `show_overview` | `true` | Portfolio | Show the overview section |
 | `show_positions` | `true` | Portfolio | Show the positions section |
 | `show_pies` | `true` | Portfolio | Show the pies section |
 | `mode` | `positions` | Allocation | `positions` (all positions) or `pies` (one block per pie) |
-| `pie` | — | Allocation | Pie slug to filter positions to a single pie (e.g. `thematic`) |
+| `pie` | — | Allocation | Slug of the pie to filter positions to (e.g. `thematic`, `aggressive_but_safe`). See [Entity slug convention](#entity-slug-convention). |
 | `treemap_height` | `420` | Allocation | Height of the treemap in pixels |
 
 ---
