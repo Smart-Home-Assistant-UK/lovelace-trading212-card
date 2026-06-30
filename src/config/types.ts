@@ -21,6 +21,8 @@ export interface PositionSensorMap {
   current_price?: string;
   quantity?: string;
   avg_price?: string;
+  daily_gain_loss?: string;
+  daily_gain_loss_percent?: string;
   history_entity?: string;
 }
 
@@ -64,20 +66,24 @@ export interface ResolvedAccountSensors {
 }
 
 export interface ResolvedPosition {
+  id: string;
   name: string;
   ticker?: string;
-  value: string;
-  pnl: string;
-  pnl_percent: string;
+  value?: string;
+  pnl?: string;
+  pnl_percent?: string;
   current_price?: string;
   quantity?: string;
   avg_price?: string;
-  history_entity: string;
+  daily_gain_loss?: string;
+  daily_gain_loss_percent?: string;
+  history_entity?: string;
 }
 
 export interface ResolvedPie {
+  id: string;
   name: string;
-  value: string;
+  value?: string;
   pnl?: string;
   pnl_percent?: string;
   invested?: string;
