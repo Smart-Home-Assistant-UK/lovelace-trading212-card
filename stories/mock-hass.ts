@@ -52,3 +52,26 @@ export const emptyHass: HomeAssistant = {
   states: {},
   callApi: async () => [] as any,
 };
+
+export const partialSensorsHass: HomeAssistant = {
+  states: {
+    'sensor.trading212_total_value': e('5823.40'),
+    'sensor.trading212_invested': e('4750.00'),
+    'sensor.trading212_unrealized_pnl': e('1073.40'),
+    'sensor.trading212_result_percent': e('22.60'),
+    'sensor.trading212_cash_available': e('200.00'),
+    'sensor.trading212_total_dividends': e('42.18'),
+    // AAPL: only quantity + pnl_percent selected — no value, no pnl, no prices.
+    'sensor.trading212_aapl_us_eq_quantity': e('10'),
+    'sensor.trading212_aapl_us_eq_pnl_percent': e('16.67'),
+    // MSFT: only daily change selected.
+    'sensor.trading212_msft_us_eq_daily_gain_loss': e('-8.40'),
+    'sensor.trading212_msft_us_eq_daily_gain_loss_percent': e('-0.60'),
+    // Growth pie: only value + progress selected.
+    'sensor.trading212_growth_pie_value': e('2000.00'),
+    'sensor.trading212_growth_pie_progress': e('40'),
+    // Income pie: only pnl selected — no value, no progress.
+    'sensor.trading212_income_pie_pnl': e('30.00'),
+  },
+  callApi: async () => [] as any,
+};
