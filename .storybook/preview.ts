@@ -17,13 +17,34 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Minimal <ha-card> stub — just a styled block element
+// Minimal <ha-card> stub — just a styled block element.
+//
+// Defaults live in a `:host` rule inside the stub's own shadow root rather
+// than as an inline `style` attribute. An inline style always wins over any
+// stylesheet rule regardless of specificity, which silently defeated cards
+// like health-card.ts that declare their own `ha-card { padding: 20px }`
+// override. `:host` rules are the lowest-priority normal rule by design —
+// exactly so an outer component's own stylesheet (selecting `ha-card` by
+// tag, as health-card.ts does) can override the default, matching how real
+// HA's `ha-card` behaves.
 if (!customElements.get('ha-card')) {
   class HaCard extends HTMLElement {
-    connectedCallback() {
-      this.style.cssText = `
-        display: block; background: #1c1c1e; border-radius: 12px;
-        padding: 8px 0; max-width: 480px; margin: 16px auto;
+    constructor() {
+      super();
+      const root = this.attachShadow({ mode: 'open' });
+      root.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            box-sizing: border-box;
+            background: #1c1c1e;
+            border-radius: 12px;
+            padding: 8px 0;
+            max-width: 480px;
+            margin: 16px auto;
+          }
+        </style>
+        <slot></slot>
       `;
     }
   }
