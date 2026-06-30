@@ -231,7 +231,7 @@ export class InvestmentAllocationCard extends LitElement {
 
     if (mode === 'pies') {
       rows = pies.map((pie) => {
-        const valStr = this.hass.states[pie.value]?.state;
+        const valStr = pie.value ? this.hass.states[pie.value]?.state : undefined;
         const pctStr = pie.pnl_percent ? this.hass.states[pie.pnl_percent]?.state : undefined;
         const value = parseFloat(valStr ?? '');
         const pnlPct = parseFloat(pctStr ?? '');
@@ -254,8 +254,8 @@ export class InvestmentAllocationCard extends LitElement {
         }
       }
       rows = filteredPositions.map((pos) => {
-        const valStr = this.hass.states[pos.value]?.state;
-        const pctStr = this.hass.states[pos.pnl_percent]?.state;
+        const valStr = pos.value ? this.hass.states[pos.value]?.state : undefined;
+        const pctStr = pos.pnl_percent ? this.hass.states[pos.pnl_percent]?.state : undefined;
         const value = parseFloat(valStr ?? '');
         const pnlPct = parseFloat(pctStr ?? '');
         return {
