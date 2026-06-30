@@ -33,35 +33,77 @@ export class InvestmentPositionRow extends LitElement {
 
   render() {
     const { position: p, hass } = this;
+    const hasPnl = p.pnl !== undefined || p.pnl_percent !== undefined;
+    const pnlColorSource = p.pnl ?? p.pnl_percent;
+
     return html`
       <div class="list-item" @click=${this._toggle}>
-        <div>
+        <div class="item-main">
           <div class="item-name">${p.name}</div>
           ${p.ticker ? html`<div class="item-ticker">${p.ticker}</div>` : nothing}
         </div>
-        <div class="item-value">${fmt(hass, p.value)}</div>
-        <div class="item-pnl ${pnlCls(hass, p.pnl)}">
-          ${fmt(hass, p.pnl)}<br/>
-          <span style="font-size:0.75rem">${fmt(hass, p.pnl_percent) === '—' ? '—' : `${fmt(hass, p.pnl_percent)}%`}</span>
-        </div>
-        <investment-sparkline .hass=${hass} .entityId=${p.history_entity}></investment-sparkline>
+        ${p.value !== undefined
+          ? html`<div class="item-value">${fmt(hass, p.value)}</div>`
+          : nothing}
+        ${hasPnl
+          ? html`
+            <div class="item-pnl ${pnlCls(hass, pnlColorSource)}">
+              ${p.pnl !== undefined ? html`${fmt(hass, p.pnl)}` : nothing}
+              ${p.pnl !== undefined && p.pnl_percent !== undefined ? html`<br/>` : nothing}
+              ${p.pnl_percent !== undefined
+                ? html`<span style="font-size:0.75rem">${
+                    fmt(hass, p.pnl_percent) === '—' ? '—' : `${fmt(hass, p.pnl_percent)}%`
+                  }</span>`
+                : nothing}
+            </div>`
+          : nothing}
+        ${p.history_entity
+          ? html`<investment-sparkline .hass=${hass} .entityId=${p.history_entity}></investment-sparkline>`
+          : nothing}
       </div>
-      ${this.expanded ? html`
+      ${this.expanded
+        ? html`
         <div class="expand-panel">
-          <div class="expand-stat">
-            <span class="expand-label">Quantity</span>
-            <span class="expand-value">${fmt(hass, p.quantity)}</span>
-          </div>
-          <div class="expand-stat">
-            <span class="expand-label">Avg Price</span>
-            <span class="expand-value">${fmt(hass, p.avg_price)}</span>
-          </div>
-          <div class="expand-stat">
-            <span class="expand-label">Current Price</span>
-            <span class="expand-value">${fmt(hass, p.current_price)}</span>
-          </div>
-          <investment-sparkline .hass=${hass} .entityId=${p.history_entity} wide></investment-sparkline>
-        </div>` : nothing}
+          ${p.quantity !== undefined
+            ? html`
+            <div class="expand-stat">
+              <span class="expand-label">Quantity</span>
+              <span class="expand-value">${fmt(hass, p.quantity)}</span>
+            </div>`
+            : nothing}
+          ${p.avg_price !== undefined
+            ? html`
+            <div class="expand-stat">
+              <span class="expand-label">Avg Price</span>
+              <span class="expand-value">${fmt(hass, p.avg_price)}</span>
+            </div>`
+            : nothing}
+          ${p.current_price !== undefined
+            ? html`
+            <div class="expand-stat">
+              <span class="expand-label">Current Price</span>
+              <span class="expand-value">${fmt(hass, p.current_price)}</span>
+            </div>`
+            : nothing}
+          ${p.daily_gain_loss !== undefined
+            ? html`
+            <div class="expand-stat">
+              <span class="expand-label">Today's P&L</span>
+              <span class="expand-value ${pnlCls(hass, p.daily_gain_loss)}">${fmt(hass, p.daily_gain_loss)}</span>
+            </div>`
+            : nothing}
+          ${p.daily_gain_loss_percent !== undefined
+            ? html`
+            <div class="expand-stat">
+              <span class="expand-label">Today's P&L %</span>
+              <span class="expand-value ${pnlCls(hass, p.daily_gain_loss_percent)}">${fmt(hass, p.daily_gain_loss_percent)}%</span>
+            </div>`
+            : nothing}
+          ${p.history_entity
+            ? html`<investment-sparkline .hass=${hass} .entityId=${p.history_entity} wide></investment-sparkline>`
+            : nothing}
+        </div>`
+        : nothing}
     `;
   }
 }
