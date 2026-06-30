@@ -27,7 +27,7 @@ export const mockHass: HomeAssistant = {
     'sensor.trading212_msft_us_eq_quantity': e('5'),
     'sensor.trading212_msft_us_eq_avg_price': e('300.00'),
     'sensor.trading212_msft_us_eq_current_price': e('280.00'),
-    'sensor.trading212_growth_pie_value': e('2000.00'),
+    'sensor.trading212_growth_pie_value': e('2000.00', { tickers: ['AAPL_US_EQ'] }),
     'sensor.trading212_growth_pie_pnl': e('200.00'),
     'sensor.trading212_growth_pie_pnl_percent': e('11.11'),
     'sensor.trading212_growth_pie_invested': e('1800.00'),
@@ -50,6 +50,17 @@ export const unavailableHass: HomeAssistant = {
 
 export const emptyHass: HomeAssistant = {
   states: {},
+  callApi: async () => [] as any,
+};
+
+// Same as mockHass but without top/bottom daily mover sensors — exercises
+// the conditional mover-row/mover-line rendering in Overview and Health.
+export const noMoversHass: HomeAssistant = {
+  states: Object.fromEntries(
+    Object.entries(mockHass.states).filter(
+      ([key]) => key !== 'sensor.trading212_top_daily_mover' && key !== 'sensor.trading212_bottom_daily_mover'
+    )
+  ),
   callApi: async () => [] as any,
 };
 
