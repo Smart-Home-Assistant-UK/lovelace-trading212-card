@@ -70,7 +70,10 @@ export const partialSensorsHass: HomeAssistant = {
     // Growth pie: only value + progress selected.
     'sensor.trading212_growth_pie_value': e('2000.00'),
     'sensor.trading212_growth_pie_progress': e('40'),
-    // Income pie: only pnl selected — no value, no progress.
+    // Income pie: only the shared `pnl` sensor selected, no pie-exclusive
+    // sensor (invested/cash/progress/goal/dividends_*) — type can't be
+    // determined, so this pie is intentionally omitted from discovery
+    // entirely (not just missing fields). Exercises the ambiguous-slug path.
     'sensor.trading212_income_pie_pnl': e('30.00'),
   },
   callApi: async () => [] as any,
