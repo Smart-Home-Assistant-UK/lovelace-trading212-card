@@ -106,6 +106,8 @@ positions:
     quantity: sensor.aapl_qty
     avg_price: sensor.aapl_avg
     current_price: sensor.aapl_price
+    daily_gain_loss: sensor.aapl_daily_pnl
+    daily_gain_loss_percent: sensor.aapl_daily_pnl_pct
 ```
 
 ---
@@ -161,7 +163,8 @@ All three modes side by side — pies overview, positions filtered to one pie, a
 - **Auto-discovery** — new positions and pies appear automatically without config changes
 - **Sparklines** — the health card shows a 7-day portfolio value trend; position rows show per-instrument history from the HA recorder
 - **Theming** — all colours and backgrounds use HA CSS custom properties and adapt to any theme automatically
-- **Unavailable sensors** — missing or stale entities render as `—` and never cause card errors
+- **Unavailable sensors** — entities that exist but are temporarily unavailable/unknown render as `—`
+- **Optional sensors** — the trading212 integration lets you pick which per-position and per-pie sensors to create; a position or pie shows up as soon as *any* of its sensors exist, and fields for sensors you haven't enabled are simply omitted (no `—` placeholders) rather than requiring every metric to be selected
 
 ---
 
