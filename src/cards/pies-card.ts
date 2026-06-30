@@ -31,9 +31,9 @@ export class InvestmentPiesCard extends LitElement {
             <investment-pie-row
               .hass=${this.hass}
               .pie=${pie}
-              .expanded=${this._expanded === pie.value}
+              .expanded=${this._expanded === pie.id}
               @toggle-expand=${() => {
-                this._expanded = this._expanded === pie.value ? null : pie.value;
+                this._expanded = this._expanded === pie.id ? null : pie.id;
               }}
             ></investment-pie-row>`)}
         </div>

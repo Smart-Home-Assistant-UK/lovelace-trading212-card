@@ -31,9 +31,9 @@ export class InvestmentPositionsCard extends LitElement {
             <investment-position-row
               .hass=${this.hass}
               .position=${pos}
-              .expanded=${this._expanded === pos.value}
+              .expanded=${this._expanded === pos.id}
               @toggle-expand=${() => {
-                this._expanded = this._expanded === pos.value ? null : pos.value;
+                this._expanded = this._expanded === pos.id ? null : pos.id;
               }}
             ></investment-position-row>`)}
         </div>
