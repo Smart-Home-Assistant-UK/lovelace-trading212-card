@@ -10,13 +10,9 @@ import type {
 const DEFAULT_PREFIX = 'sensor.trading212_';
 const DEFAULT_MAX_HEIGHT = '400px';
 
-// Mirrors ALL_POSITION_SENSORS in custom_components/trading212/const.py, with the
-// average_price -> avg_price entity-id slug applied (see _POSITION_ENTITY_SLUG in
-// custom_components/trading212/sensor.py).
-const POSITION_SUFFIXES = [
-  'value',
-  'pnl',
-  'pnl_percent',
+// Suffixes that only ever belong to a position (never a pie) — used to
+// disambiguate a discovered slug's type.
+const POSITION_EXCLUSIVE_SUFFIXES = [
   'quantity',
   'avg_price',
   'current_price',
@@ -24,12 +20,9 @@ const POSITION_SUFFIXES = [
   'daily_gain_loss_percent',
 ] as const;
 
-// Mirrors ALL_PIE_SENSORS in custom_components/trading212/const.py.
-const PIE_SUFFIXES = [
-  'value',
+// Suffixes that only ever belong to a pie (never a position).
+const PIE_EXCLUSIVE_SUFFIXES = [
   'invested',
-  'pnl',
-  'pnl_percent',
   'cash',
   'progress',
   'goal',
@@ -38,31 +31,12 @@ const PIE_SUFFIXES = [
   'dividends_reinvested',
 ] as const;
 
-// Account-level entity names that should not be discovered as positions/pies.
-// These are derived from the trading212 integration's account sensor field names.
-const ACCOUNT_SENSOR_FIELDS = [
-  'total_value',
-  'unrealized_pnl',
-  'daily_gain_loss_percent',
-] as const;
+// Suffixes both positions and pies can have — cannot disambiguate type on
+// their own.
+const SHARED_SUFFIXES = ['value', 'pnl', 'pnl_percent'] as const;
 
-// Build a set of slugs to exclude from position/pie discovery
-function buildAccountSlugsToExclude(): Set<string> {
-  const allSuffixes = [...POSITION_SUFFIXES, ...PIE_SUFFIXES];
-  const accountSlugs = new Set<string>();
-  for (const field of ACCOUNT_SENSOR_FIELDS) {
-    for (const suffix of allSuffixes) {
-      if (field.endsWith('_' + suffix)) {
-        const slug = field.substring(0, field.length - suffix.length - 1);
-        accountSlugs.add(slug);
-        break;
-      }
-    }
-  }
-  return accountSlugs;
-}
-
-const ACCOUNT_SLUGS_TO_EXCLUDE = buildAccountSlugsToExclude();
+const POSITION_SUFFIXES = [...POSITION_EXCLUSIVE_SUFFIXES, ...SHARED_SUFFIXES];
+const PIE_SUFFIXES = [...PIE_EXCLUSIVE_SUFFIXES, ...SHARED_SUFFIXES];
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -101,90 +75,91 @@ function fieldIfExists(
   return exists(states, entityId) ? entityId : undefined;
 }
 
+// Account-level sensor entity ids (e.g. "sensor.trading212_total_value")
+// collide with the per-slug suffix regex below (slug "total", suffix
+// "value"). Excluding them by exact entity id — derived from the single
+// resolveAccountSensors() source of truth — means any future account
+// sensor is automatically excluded too, with no separate list to maintain.
 function discoverSlugs(
   prefix: string,
   states: Record<string, HassEntity>,
-  suffixes: readonly string[]
-): string[] {
-  // Sort suffixes by length (longest first) to ensure longest matches are tried first
-  // Use non-greedy matching (.+?) to prevent over-matching in slugs with underscores
-  // This prevents matching 'growth_pie_dividends_in' instead of 'growth_pie'
-  // when the suffix 'dividends_in_cash' contains underscores
+  suffixes: readonly string[],
+  excludeEntityIds: ReadonlySet<string>
+): Set<string> {
+  // Sort suffixes by length (longest first) and use non-greedy slug matching
+  // (.+?) so multi-underscore suffixes like "dividends_in_cash" aren't
+  // mis-split into a shorter suffix (e.g. "cash") with the rest of the
+  // suffix left dangling on the slug.
   const sortedSuffixes = [...suffixes].sort((a, b) => b.length - a.length);
   const suffixPattern = sortedSuffixes.map(escapeRegex).join('|');
   const pattern = new RegExp(`^${escapeRegex(prefix)}(.+?)_(${suffixPattern})$`);
   const slugs = new Set<string>();
   for (const entityId of Object.keys(states)) {
+    if (excludeEntityIds.has(entityId)) continue;
     const match = entityId.match(pattern);
     if (match) slugs.add(match[1]);
   }
-  return [...slugs];
+  return slugs;
 }
 
 function discoverPositions(
   prefix: string,
-  states: Record<string, HassEntity>
+  states: Record<string, HassEntity>,
+  excludeEntityIds: ReadonlySet<string>
 ): ResolvedPosition[] {
-  return discoverSlugs(prefix, states, POSITION_SUFFIXES)
-    .filter((slug) => !ACCOUNT_SLUGS_TO_EXCLUDE.has(slug) && !slug.includes('_pie'))
-    .map((slug) => ({
-      id: slug,
-      name: slugToName(slug),
-      ticker: slug.toUpperCase(),
-      value: fieldIfExists(states, prefix, slug, 'value'),
-      pnl: fieldIfExists(states, prefix, slug, 'pnl'),
-      pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
-      current_price: fieldIfExists(states, prefix, slug, 'current_price'),
-      quantity: fieldIfExists(states, prefix, slug, 'quantity'),
-      avg_price: fieldIfExists(states, prefix, slug, 'avg_price'),
-      daily_gain_loss: fieldIfExists(states, prefix, slug, 'daily_gain_loss'),
-      daily_gain_loss_percent: fieldIfExists(states, prefix, slug, 'daily_gain_loss_percent'),
-      history_entity: fieldIfExists(states, prefix, slug, 'value'),
-    }));
-}
+  const positionExclusiveSlugs = discoverSlugs(prefix, states, POSITION_EXCLUSIVE_SUFFIXES, excludeEntityIds);
+  const candidateSlugs = discoverSlugs(prefix, states, POSITION_SUFFIXES, excludeEntityIds);
 
-// Pie-specific suffixes that are unique to pies
-const PIE_SPECIFIC_SUFFIXES = ['invested', 'cash', 'progress', 'goal', 'dividends_gained', 'dividends_in_cash', 'dividends_reinvested'] as const;
+  // A slug is only classified as a position if it has at least one
+  // position-exclusive sensor. A slug with only shared value/pnl/pnl_percent
+  // sensors enabled (no exclusive evidence either way) can't be told apart
+  // from a pie in the same situation — omit it rather than guess.
+  const slugs = [...candidateSlugs].filter((slug) => positionExclusiveSlugs.has(slug));
 
-// Position-specific suffixes that are unique to positions
-const POSITION_SPECIFIC_SUFFIXES = ['quantity', 'avg_price', 'current_price', 'daily_gain_loss', 'daily_gain_loss_percent'] as const;
-
-function hasAnyPieSpecificSuffix(
-  states: Record<string, HassEntity>,
-  prefix: string,
-  slug: string
-): boolean {
-  return PIE_SPECIFIC_SUFFIXES.some((suffix) => fieldIfExists(states, prefix, slug, suffix) !== undefined);
-}
-
-function hasAnyPositionSpecificSuffix(
-  states: Record<string, HassEntity>,
-  prefix: string,
-  slug: string
-): boolean {
-  return POSITION_SPECIFIC_SUFFIXES.some((suffix) => fieldIfExists(states, prefix, slug, suffix) !== undefined);
+  return slugs.map((slug) => ({
+    id: slug,
+    name: slugToName(slug),
+    ticker: slug.toUpperCase(),
+    value: fieldIfExists(states, prefix, slug, 'value'),
+    pnl: fieldIfExists(states, prefix, slug, 'pnl'),
+    pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
+    current_price: fieldIfExists(states, prefix, slug, 'current_price'),
+    quantity: fieldIfExists(states, prefix, slug, 'quantity'),
+    avg_price: fieldIfExists(states, prefix, slug, 'avg_price'),
+    daily_gain_loss: fieldIfExists(states, prefix, slug, 'daily_gain_loss'),
+    daily_gain_loss_percent: fieldIfExists(states, prefix, slug, 'daily_gain_loss_percent'),
+    history_entity: fieldIfExists(states, prefix, slug, 'value'),
+  }));
 }
 
 function discoverPies(
   prefix: string,
-  states: Record<string, HassEntity>
+  states: Record<string, HassEntity>,
+  excludeEntityIds: ReadonlySet<string>
 ): ResolvedPie[] {
-  return discoverSlugs(prefix, states, PIE_SUFFIXES)
-    .filter((slug) => !ACCOUNT_SLUGS_TO_EXCLUDE.has(slug) && !hasAnyPositionSpecificSuffix(states, prefix, slug) && (slug.includes('_pie') || hasAnyPieSpecificSuffix(states, prefix, slug)))
-    .map((slug) => ({
-      id: slug,
-      name: slugToName(slug),
-      value: fieldIfExists(states, prefix, slug, 'value'),
-      pnl: fieldIfExists(states, prefix, slug, 'pnl'),
-      pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
-      invested: fieldIfExists(states, prefix, slug, 'invested'),
-      cash: fieldIfExists(states, prefix, slug, 'cash'),
-      progress: fieldIfExists(states, prefix, slug, 'progress'),
-      goal: fieldIfExists(states, prefix, slug, 'goal'),
-      dividends_gained: fieldIfExists(states, prefix, slug, 'dividends_gained'),
-      dividends_in_cash: fieldIfExists(states, prefix, slug, 'dividends_in_cash'),
-      dividends_reinvested: fieldIfExists(states, prefix, slug, 'dividends_reinvested'),
-    }));
+  const pieExclusiveSlugs = discoverSlugs(prefix, states, PIE_EXCLUSIVE_SUFFIXES, excludeEntityIds);
+  const candidateSlugs = discoverSlugs(prefix, states, PIE_SUFFIXES, excludeEntityIds);
+
+  // A slug is only classified as a pie if it has at least one pie-exclusive
+  // sensor. A slug with only shared value/pnl/pnl_percent sensors enabled
+  // (no exclusive evidence either way) can't be told apart from a position
+  // in the same situation — omit it rather than guess.
+  const slugs = [...candidateSlugs].filter((slug) => pieExclusiveSlugs.has(slug));
+
+  return slugs.map((slug) => ({
+    id: slug,
+    name: slugToName(slug),
+    value: fieldIfExists(states, prefix, slug, 'value'),
+    pnl: fieldIfExists(states, prefix, slug, 'pnl'),
+    pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
+    invested: fieldIfExists(states, prefix, slug, 'invested'),
+    cash: fieldIfExists(states, prefix, slug, 'cash'),
+    progress: fieldIfExists(states, prefix, slug, 'progress'),
+    goal: fieldIfExists(states, prefix, slug, 'goal'),
+    dividends_gained: fieldIfExists(states, prefix, slug, 'dividends_gained'),
+    dividends_in_cash: fieldIfExists(states, prefix, slug, 'dividends_in_cash'),
+    dividends_reinvested: fieldIfExists(states, prefix, slug, 'dividends_reinvested'),
+  }));
 }
 
 export function resolveConfig(
@@ -227,10 +202,12 @@ export function resolveConfig(
   }
 
   const prefix = cfg.prefix ?? DEFAULT_PREFIX;
+  const account = resolveAccountSensors(prefix);
+  const accountEntityIds = new Set(Object.values(account));
   return {
-    account: resolveAccountSensors(prefix),
-    positions: discoverPositions(prefix, states),
-    pies: discoverPies(prefix, states),
+    account,
+    positions: discoverPositions(prefix, states, accountEntityIds),
+    pies: discoverPies(prefix, states, accountEntityIds),
     maxHeight,
     showOverview,
     showPositions,
