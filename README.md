@@ -1,6 +1,8 @@
 # Trading212 Lovelace Card
 
 [![GitHub release](https://img.shields.io/github/v/release/Smart-Home-Assistant-UK/lovelace-trading212-card)](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/releases)
+[![Tests](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/actions/workflows/test.yml/badge.svg)](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/Smart-Home-Assistant-UK/lovelace-trading212-card/graph/badge.svg)](https://codecov.io/gh/Smart-Home-Assistant-UK/lovelace-trading212-card)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
