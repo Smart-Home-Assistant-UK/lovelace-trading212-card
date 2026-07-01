@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components';
 import { html } from 'lit';
-import { mockHass, emptyHass } from './mock-hass';
+import { mockHass, emptyHass, partialSensorsHass } from './mock-hass';
 import type { RawCardConfig } from '../src/config/types';
 
 const meta: Meta = { title: 'Cards/Portfolio' };
@@ -18,4 +18,8 @@ export const Default: StoryObj = { render: () => render(mockHass) };
 export const OverviewOnly: StoryObj = {
   render: () => render(mockHass, { show_positions: false, show_pies: false }),
 };
+export const PositionsOnly: StoryObj = {
+  render: () => render(mockHass, { show_overview: false, show_pies: false }),
+};
+export const PartialSensors: StoryObj = { render: () => render(partialSensorsHass) };
 export const Empty: StoryObj = { render: () => render(emptyHass) };

@@ -1,19 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/web-components';
 import { html } from 'lit';
-import { mockHass, unavailableHass, emptyHass, partialSensorsHass } from './mock-hass';
+import { mockHass, unavailableHass, emptyHass, noMoversHass } from './mock-hass';
 
-const meta: Meta = { title: 'Cards/Pies' };
+const meta: Meta = { title: 'Cards/Health' };
 export default meta;
 
 function render(hass: typeof mockHass) {
   return html`
-    <investment-pies-card
+    <investment-health-card
       .hass=${hass}
       .config=${{}}
-    ></investment-pies-card>`;
+    ></investment-health-card>`;
 }
 
 export const Default: StoryObj = { render: () => render(mockHass) };
 export const AllUnavailable: StoryObj = { render: () => render(unavailableHass) };
-export const NoPies: StoryObj = { render: () => render(emptyHass) };
-export const PartialSensors: StoryObj = { render: () => render(partialSensorsHass) };
+export const NoSensors: StoryObj = { render: () => render(emptyHass) };
+export const NoMovers: StoryObj = { render: () => render(noMoversHass) };

@@ -15,14 +15,14 @@ const T212: Record<string, HassEntity> = {
   'sensor.trading212_total_dividends': e('30'),
   'sensor.trading212_top_daily_mover': e('Apple'),
   'sensor.trading212_bottom_daily_mover': e('Microsoft'),
-  // position — detected via _quantity
+  // position — full attribute set
   'sensor.trading212_aapl_us_eq_value': e('1750'),
   'sensor.trading212_aapl_us_eq_pnl': e('250'),
   'sensor.trading212_aapl_us_eq_pnl_percent': e('16.7'),
   'sensor.trading212_aapl_us_eq_quantity': e('10'),
   'sensor.trading212_aapl_us_eq_avg_price': e('150'),
   'sensor.trading212_aapl_us_eq_current_price': e('175'),
-  // pie — detected via _invested
+  // pie — full attribute set
   'sensor.trading212_growth_pie_value': e('2000'),
   'sensor.trading212_growth_pie_pnl': e('200'),
   'sensor.trading212_growth_pie_pnl_percent': e('10'),
@@ -43,9 +43,10 @@ describe('auto-detect (no config)', () => {
     expect(r.account.top_daily_mover).toBe('sensor.trading212_top_daily_mover');
   });
 
-  it('discovers one position via _quantity sensor', () => {
+  it('discovers one position with a full attribute set', () => {
     const r = resolveConfig(undefined, T212);
     expect(r.positions).toHaveLength(1);
+    expect(r.positions[0].id).toBe('aapl_us_eq');
     expect(r.positions[0].value).toBe('sensor.trading212_aapl_us_eq_value');
     expect(r.positions[0].pnl).toBe('sensor.trading212_aapl_us_eq_pnl');
     expect(r.positions[0].pnl_percent).toBe('sensor.trading212_aapl_us_eq_pnl_percent');
@@ -53,9 +54,10 @@ describe('auto-detect (no config)', () => {
     expect(r.positions[0].history_entity).toBe('sensor.trading212_aapl_us_eq_value');
   });
 
-  it('discovers one pie via _invested sensor', () => {
+  it('discovers one pie with a full attribute set', () => {
     const r = resolveConfig(undefined, T212);
     expect(r.pies).toHaveLength(1);
+    expect(r.pies[0].id).toBe('growth_pie');
     expect(r.pies[0].value).toBe('sensor.trading212_growth_pie_value');
     expect(r.pies[0].invested).toBe('sensor.trading212_growth_pie_invested');
     expect(r.pies[0].dividends_gained).toBe('sensor.trading212_growth_pie_dividends_gained');
@@ -71,6 +73,81 @@ describe('auto-detect (no config)', () => {
 
   it('returns empty arrays with empty states', () => {
     const r = resolveConfig(undefined, {});
+    expect(r.positions).toHaveLength(0);
+    expect(r.pies).toHaveLength(0);
+  });
+});
+
+describe('partial sensor selection', () => {
+  it('discovers a position via a single position-exclusive sensor (avg_price only)', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_tsla_us_eq_avg_price': e('220'),
+    };
+    const r = resolveConfig(undefined, states);
+    expect(r.positions).toHaveLength(1);
+    expect(r.positions[0].id).toBe('tsla_us_eq');
+    expect(r.positions[0].avg_price).toBe('sensor.trading212_tsla_us_eq_avg_price');
+    expect(r.positions[0].value).toBeUndefined();
+    expect(r.positions[0].quantity).toBeUndefined();
+    expect(r.positions[0].history_entity).toBeUndefined();
+  });
+
+  it('discovers a pie via a single pie-exclusive sensor (cash only)', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_income_pie_cash': e('15'),
+    };
+    const r = resolveConfig(undefined, states);
+    expect(r.pies).toHaveLength(1);
+    expect(r.pies[0].id).toBe('income_pie');
+    expect(r.pies[0].cash).toBe('sensor.trading212_income_pie_cash');
+    expect(r.pies[0].invested).toBeUndefined();
+    expect(r.pies[0].value).toBeUndefined();
+  });
+
+  it('resolves daily_gain_loss and daily_gain_loss_percent when present', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_aapl_us_eq_quantity': e('10'),
+      'sensor.trading212_aapl_us_eq_daily_gain_loss': e('12.5'),
+      'sensor.trading212_aapl_us_eq_daily_gain_loss_percent': e('0.8'),
+    };
+    const r = resolveConfig(undefined, states);
+    expect(r.positions).toHaveLength(1);
+    expect(r.positions[0].daily_gain_loss).toBe('sensor.trading212_aapl_us_eq_daily_gain_loss');
+    expect(r.positions[0].daily_gain_loss_percent).toBe(
+      'sensor.trading212_aapl_us_eq_daily_gain_loss_percent'
+    );
+  });
+
+  it('omits fields whose sensor entity does not exist', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_aapl_us_eq_value': e('1750'),
+      'sensor.trading212_aapl_us_eq_quantity': e('10'),
+    };
+    const r = resolveConfig(undefined, states);
+    expect(r.positions[0].value).toBe('sensor.trading212_aapl_us_eq_value');
+    expect(r.positions[0].quantity).toBe('sensor.trading212_aapl_us_eq_quantity');
+    expect(r.positions[0].pnl).toBeUndefined();
+    expect(r.positions[0].pnl_percent).toBeUndefined();
+    expect(r.positions[0].avg_price).toBeUndefined();
+    expect(r.positions[0].current_price).toBeUndefined();
+    expect(r.positions[0].daily_gain_loss).toBeUndefined();
+  });
+
+  it('omits a slug that only has shared (non-exclusive) sensors enabled, since type cannot be determined', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_ambiguous_thing_pnl_percent': e('2.0'),
+    };
+    const r = resolveConfig(undefined, states);
+    expect(r.positions).toHaveLength(0);
+    expect(r.pies).toHaveLength(0);
+  });
+
+  it('does not misdetect account-level sensors as a position/pie slug', () => {
+    const states: Record<string, HassEntity> = {
+      'sensor.trading212_total_value': e('5000'),
+      'sensor.trading212_unrealized_pnl': e('500'),
+    };
+    const r = resolveConfig(undefined, states);
     expect(r.positions).toHaveLength(0);
     expect(r.pies).toHaveLength(0);
   });
@@ -99,7 +176,7 @@ describe('prefix mode', () => {
     expect(r.positions[0].history_entity).toBe('sensor.broker_aapl_value');
   });
 
-  it('returns empty pies when no _invested sensors exist', () => {
+  it('returns empty pies when no pie sensors exist', () => {
     const r = resolveConfig({ prefix: 'sensor.broker_' }, CUSTOM);
     expect(r.pies).toHaveLength(0);
   });
@@ -164,5 +241,25 @@ describe('explicit mapping', () => {
   it('respects custom max_height', () => {
     const r = resolveConfig({ max_height: '600px', positions: [] }, {});
     expect(r.maxHeight).toBe('600px');
+  });
+
+  it('derives position id from value when provided', () => {
+    const r = resolveConfig(
+      {
+        positions: [
+          { name: 'Apple', value: 'sensor.my_aapl_val', pnl: 'p', pnl_percent: 'pp' },
+        ],
+      },
+      {}
+    );
+    expect(r.positions[0].id).toBe('sensor.my_aapl_val');
+  });
+
+  it('derives pie id from name when value is absent', () => {
+    const r = resolveConfig(
+      { pies: [{ name: 'Growth', value: '' as unknown as string }] },
+      {}
+    );
+    expect(r.pies[0].id).toBe('Growth');
   });
 });

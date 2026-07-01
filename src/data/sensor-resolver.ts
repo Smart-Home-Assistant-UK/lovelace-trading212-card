@@ -10,6 +10,34 @@ import type {
 const DEFAULT_PREFIX = 'sensor.trading212_';
 const DEFAULT_MAX_HEIGHT = '400px';
 
+// Suffixes that only ever belong to a position (never a pie) — used to
+// disambiguate a discovered slug's type.
+const POSITION_EXCLUSIVE_SUFFIXES = [
+  'quantity',
+  'avg_price',
+  'current_price',
+  'daily_gain_loss',
+  'daily_gain_loss_percent',
+] as const;
+
+// Suffixes that only ever belong to a pie (never a position).
+const PIE_EXCLUSIVE_SUFFIXES = [
+  'invested',
+  'cash',
+  'progress',
+  'goal',
+  'dividends_gained',
+  'dividends_in_cash',
+  'dividends_reinvested',
+] as const;
+
+// Suffixes both positions and pies can have — cannot disambiguate type on
+// their own.
+const SHARED_SUFFIXES = ['value', 'pnl', 'pnl_percent'] as const;
+
+const POSITION_SUFFIXES = [...POSITION_EXCLUSIVE_SUFFIXES, ...SHARED_SUFFIXES];
+const PIE_SUFFIXES = [...PIE_EXCLUSIVE_SUFFIXES, ...SHARED_SUFFIXES];
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -33,56 +61,104 @@ function resolveAccountSensors(prefix: string): ResolvedAccountSensors {
   };
 }
 
-function isAvailable(states: Record<string, HassEntity>, entityId: string): boolean {
-  const s = states[entityId];
-  return !!s && s.state !== 'unavailable' && s.state !== 'unknown';
+function exists(states: Record<string, HassEntity>, entityId: string): boolean {
+  return entityId in states;
+}
+
+function fieldIfExists(
+  states: Record<string, HassEntity>,
+  prefix: string,
+  slug: string,
+  suffix: string
+): string | undefined {
+  const entityId = `${prefix}${slug}_${suffix}`;
+  return exists(states, entityId) ? entityId : undefined;
+}
+
+// Account-level sensor entity ids (e.g. "sensor.trading212_total_value")
+// collide with the per-slug suffix regex below (slug "total", suffix
+// "value"). Excluding them by exact entity id — derived from the single
+// resolveAccountSensors() source of truth — means any future account
+// sensor is automatically excluded too, with no separate list to maintain.
+function discoverSlugs(
+  prefix: string,
+  states: Record<string, HassEntity>,
+  suffixes: readonly string[],
+  excludeEntityIds: ReadonlySet<string>
+): Set<string> {
+  // Sort suffixes by length (longest first) and use non-greedy slug matching
+  // (.+?) so multi-underscore suffixes like "dividends_in_cash" aren't
+  // mis-split into a shorter suffix (e.g. "cash") with the rest of the
+  // suffix left dangling on the slug.
+  const sortedSuffixes = [...suffixes].sort((a, b) => b.length - a.length);
+  const suffixPattern = sortedSuffixes.map(escapeRegex).join('|');
+  const pattern = new RegExp(`^${escapeRegex(prefix)}(.+?)_(${suffixPattern})$`);
+  const slugs = new Set<string>();
+  for (const entityId of Object.keys(states)) {
+    if (excludeEntityIds.has(entityId)) continue;
+    const match = entityId.match(pattern);
+    if (match) slugs.add(match[1]);
+  }
+  return slugs;
 }
 
 function discoverPositions(
   prefix: string,
-  states: Record<string, HassEntity>
+  states: Record<string, HassEntity>,
+  excludeEntityIds: ReadonlySet<string>
 ): ResolvedPosition[] {
-  const pattern = new RegExp(`^${escapeRegex(prefix)}(.+)_quantity$`);
-  const slugs: string[] = [];
-  for (const entityId of Object.keys(states)) {
-    const match = entityId.match(pattern);
-    if (match && isAvailable(states, `${prefix}${match[1]}_value`)) slugs.push(match[1]);
-  }
+  const positionExclusiveSlugs = discoverSlugs(prefix, states, POSITION_EXCLUSIVE_SUFFIXES, excludeEntityIds);
+  const candidateSlugs = discoverSlugs(prefix, states, POSITION_SUFFIXES, excludeEntityIds);
+
+  // A slug is only classified as a position if it has at least one
+  // position-exclusive sensor. A slug with only shared value/pnl/pnl_percent
+  // sensors enabled (no exclusive evidence either way) can't be told apart
+  // from a pie in the same situation — omit it rather than guess.
+  const slugs = [...candidateSlugs].filter((slug) => positionExclusiveSlugs.has(slug));
+
   return slugs.map((slug) => ({
+    id: slug,
     name: slugToName(slug),
     ticker: slug.toUpperCase(),
-    value: `${prefix}${slug}_value`,
-    pnl: `${prefix}${slug}_pnl`,
-    pnl_percent: `${prefix}${slug}_pnl_percent`,
-    current_price: `${prefix}${slug}_current_price`,
-    quantity: `${prefix}${slug}_quantity`,
-    avg_price: `${prefix}${slug}_avg_price`,
-    history_entity: `${prefix}${slug}_value`,
+    value: fieldIfExists(states, prefix, slug, 'value'),
+    pnl: fieldIfExists(states, prefix, slug, 'pnl'),
+    pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
+    current_price: fieldIfExists(states, prefix, slug, 'current_price'),
+    quantity: fieldIfExists(states, prefix, slug, 'quantity'),
+    avg_price: fieldIfExists(states, prefix, slug, 'avg_price'),
+    daily_gain_loss: fieldIfExists(states, prefix, slug, 'daily_gain_loss'),
+    daily_gain_loss_percent: fieldIfExists(states, prefix, slug, 'daily_gain_loss_percent'),
+    history_entity: fieldIfExists(states, prefix, slug, 'value'),
   }));
 }
 
 function discoverPies(
   prefix: string,
-  states: Record<string, HassEntity>
+  states: Record<string, HassEntity>,
+  excludeEntityIds: ReadonlySet<string>
 ): ResolvedPie[] {
-  const pattern = new RegExp(`^${escapeRegex(prefix)}(.+)_invested$`);
-  const slugs: string[] = [];
-  for (const entityId of Object.keys(states)) {
-    const match = entityId.match(pattern);
-    if (match && match[1] && isAvailable(states, `${prefix}${match[1]}_value`)) slugs.push(match[1]);
-  }
+  const pieExclusiveSlugs = discoverSlugs(prefix, states, PIE_EXCLUSIVE_SUFFIXES, excludeEntityIds);
+  const candidateSlugs = discoverSlugs(prefix, states, PIE_SUFFIXES, excludeEntityIds);
+
+  // A slug is only classified as a pie if it has at least one pie-exclusive
+  // sensor. A slug with only shared value/pnl/pnl_percent sensors enabled
+  // (no exclusive evidence either way) can't be told apart from a position
+  // in the same situation — omit it rather than guess.
+  const slugs = [...candidateSlugs].filter((slug) => pieExclusiveSlugs.has(slug));
+
   return slugs.map((slug) => ({
+    id: slug,
     name: slugToName(slug),
-    value: `${prefix}${slug}_value`,
-    pnl: `${prefix}${slug}_pnl`,
-    pnl_percent: `${prefix}${slug}_pnl_percent`,
-    invested: `${prefix}${slug}_invested`,
-    cash: `${prefix}${slug}_cash`,
-    progress: `${prefix}${slug}_progress`,
-    goal: `${prefix}${slug}_goal`,
-    dividends_gained: `${prefix}${slug}_dividends_gained`,
-    dividends_in_cash: `${prefix}${slug}_dividends_in_cash`,
-    dividends_reinvested: `${prefix}${slug}_dividends_reinvested`,
+    value: fieldIfExists(states, prefix, slug, 'value'),
+    pnl: fieldIfExists(states, prefix, slug, 'pnl'),
+    pnl_percent: fieldIfExists(states, prefix, slug, 'pnl_percent'),
+    invested: fieldIfExists(states, prefix, slug, 'invested'),
+    cash: fieldIfExists(states, prefix, slug, 'cash'),
+    progress: fieldIfExists(states, prefix, slug, 'progress'),
+    goal: fieldIfExists(states, prefix, slug, 'goal'),
+    dividends_gained: fieldIfExists(states, prefix, slug, 'dividends_gained'),
+    dividends_in_cash: fieldIfExists(states, prefix, slug, 'dividends_in_cash'),
+    dividends_reinvested: fieldIfExists(states, prefix, slug, 'dividends_reinvested'),
   }));
 }
 
@@ -97,7 +173,8 @@ export function resolveConfig(
   const showPies = cfg.show_pies ?? true;
 
   if (cfg.positions !== undefined || cfg.pies !== undefined) {
-    const positions: ResolvedPosition[] = (cfg.positions ?? []).map((p) => ({
+    const positions: ResolvedPosition[] = (cfg.positions ?? []).map((p, index) => ({
+      id: p.value || p.name || String(index),
       name: p.name,
       value: p.value,
       pnl: p.pnl,
@@ -105,9 +182,14 @@ export function resolveConfig(
       current_price: p.current_price,
       quantity: p.quantity,
       avg_price: p.avg_price,
+      daily_gain_loss: p.daily_gain_loss,
+      daily_gain_loss_percent: p.daily_gain_loss_percent,
       history_entity: p.history_entity ?? p.value,
     }));
-    const pies: ResolvedPie[] = (cfg.pies ?? []).map((p) => ({ ...p }));
+    const pies: ResolvedPie[] = (cfg.pies ?? []).map((p, index) => ({
+      id: p.value || p.name || String(index),
+      ...p,
+    }));
     return {
       account: cfg.currency_sensor ? { total_value: cfg.currency_sensor } : {},
       positions,
@@ -120,10 +202,12 @@ export function resolveConfig(
   }
 
   const prefix = cfg.prefix ?? DEFAULT_PREFIX;
+  const account = resolveAccountSensors(prefix);
+  const accountEntityIds = new Set(Object.values(account));
   return {
-    account: resolveAccountSensors(prefix),
-    positions: discoverPositions(prefix, states),
-    pies: discoverPies(prefix, states),
+    account,
+    positions: discoverPositions(prefix, states, accountEntityIds),
+    pies: discoverPies(prefix, states, accountEntityIds),
     maxHeight,
     showOverview,
     showPositions,

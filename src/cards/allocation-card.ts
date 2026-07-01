@@ -64,7 +64,7 @@ function squarify(
   }
 }
 
-function computeTreemap(values: number[], w: number, h: number): Rect[] {
+export function computeTreemap(values: number[], w: number, h: number): Rect[] {
   if (!values.length || w <= 0 || h <= 0) return [];
   const total = values.reduce((s, v) => s + v, 0);
   if (total === 0) return values.map(() => ({ x: 0, y: 0, w: 0, h: 0 }));
@@ -79,19 +79,19 @@ function computeTreemap(values: number[], w: number, h: number): Rect[] {
 
 // --- Helpers ---
 
-function pnlBg(pct: number): string {
+export function pnlBg(pct: number): string {
   const abs = Math.min(Math.abs(pct) / 10, 1);
   const alpha = (0.12 + abs * 0.22).toFixed(2);
   return pct >= 0 ? `rgba(76,175,80,${alpha})` : `rgba(244,67,54,${alpha})`;
 }
 
-function avatarColor(ticker: string): string {
+export function avatarColor(ticker: string): string {
   let h = 0;
   for (let i = 0; i < ticker.length; i++) h = (h * 31 + ticker.charCodeAt(i)) & 0xffff;
   return `hsl(${(h * 137) % 360},50%,38%)`;
 }
 
-function displayTicker(ticker: string): string {
+export function displayTicker(ticker: string): string {
   // Strip Trading212 exchange suffixes like _EQ, _US_EQ, _UK, _L
   return ticker.replace(/[_\s]+(US[_\s]*)?EQ$/i, '').replace(/[_\s]+L$/i, '');
 }
@@ -226,19 +226,21 @@ export class InvestmentAllocationCard extends LitElement {
 
     const { positions, pies } = resolveConfig(this.config, this.hass.states);
 
-    type Row = { label: string; value: number; pnlPct: number };
+    // pnlPct is undefined (not 0) when the position/pie has no pnl_percent
+    // sensor selected — distinct from a sensor that genuinely reports 0%.
+    type Row = { label: string; value: number; pnlPct: number | undefined };
     let rows: Row[];
 
     if (mode === 'pies') {
       rows = pies.map((pie) => {
-        const valStr = this.hass.states[pie.value]?.state;
+        const valStr = pie.value ? this.hass.states[pie.value]?.state : undefined;
         const pctStr = pie.pnl_percent ? this.hass.states[pie.pnl_percent]?.state : undefined;
         const value = parseFloat(valStr ?? '');
-        const pnlPct = parseFloat(pctStr ?? '');
+        const pnlPct = pctStr !== undefined ? parseFloat(pctStr) : NaN;
         return {
           label: pie.name,
           value: isNaN(value) || value <= 0 ? 0 : value,
-          pnlPct: isNaN(pnlPct) ? 0 : pnlPct,
+          pnlPct: isNaN(pnlPct) ? undefined : pnlPct,
         };
       }).filter((r) => r.value > 0);
     } else {
@@ -254,14 +256,14 @@ export class InvestmentAllocationCard extends LitElement {
         }
       }
       rows = filteredPositions.map((pos) => {
-        const valStr = this.hass.states[pos.value]?.state;
-        const pctStr = this.hass.states[pos.pnl_percent]?.state;
+        const valStr = pos.value ? this.hass.states[pos.value]?.state : undefined;
+        const pctStr = pos.pnl_percent ? this.hass.states[pos.pnl_percent]?.state : undefined;
         const value = parseFloat(valStr ?? '');
-        const pnlPct = parseFloat(pctStr ?? '');
+        const pnlPct = pctStr !== undefined ? parseFloat(pctStr) : NaN;
         return {
           label: displayTicker(pos.ticker ?? pos.name),
           value: isNaN(value) || value <= 0 ? 0 : value,
-          pnlPct: isNaN(pnlPct) ? 0 : pnlPct,
+          pnlPct: isNaN(pnlPct) ? undefined : pnlPct,
         };
       }).filter((r) => r.value > 0);
     }
@@ -302,20 +304,21 @@ export class InvestmentAllocationCard extends LitElement {
             const cellH = r.h - GAP;
             if (cellW < 2 || cellH < 2) return nothing;
 
-            const bg = pnlBg(row.pnlPct);
-            const pctCls = row.pnlPct >= 0 ? 'positive' : 'negative';
-            const sign = row.pnlPct >= 0 ? '+' : '';
-            const pctLabel = `${sign}${row.pnlPct.toFixed(2)}%`;
+            const pnlPct = row.pnlPct;
+            const bg = pnlPct !== undefined ? pnlBg(pnlPct) : 'var(--secondary-background-color)';
+            const pctCls = pnlPct !== undefined ? (pnlPct >= 0 ? 'positive' : 'negative') : '';
+            const sign = pnlPct !== undefined && pnlPct >= 0 ? '+' : '';
+            const pctLabel = pnlPct !== undefined ? `${sign}${pnlPct.toFixed(2)}%` : undefined;
             const showAvatar = cellW >= 52 && cellH >= 72;
             const showLabel = cellW >= 28 && cellH >= 36;
-            const showPct = cellW >= 36 && cellH >= 54;
+            const showPct = cellW >= 36 && cellH >= 54 && pctLabel !== undefined;
             const initial = row.label.charAt(0).toUpperCase();
 
             return html`
               <div
                 class="treemap-cell"
                 style="left:${left}px;top:${top}px;width:${cellW}px;height:${cellH}px;background:${bg}"
-                title="${row.label}: ${pctLabel} P&L"
+                title="${pctLabel ? `${row.label}: ${pctLabel} P&L` : row.label}"
               >
                 ${showAvatar ? html`
                   <div class="cell-avatar" style="background:${avatarColor(row.label)}">${initial}</div>

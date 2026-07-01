@@ -76,8 +76,7 @@ export const sharedStyles = css`
   }
 
   .list-item {
-    display: grid;
-    grid-template-columns: 1fr auto auto 60px;
+    display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 0;
@@ -87,6 +86,11 @@ export const sharedStyles = css`
   }
 
   .list-item:last-child { border-bottom: none; }
+
+  .item-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 
   .item-name {
     font-weight: 500;
@@ -105,11 +109,13 @@ export const sharedStyles = css`
     font-weight: 600;
     font-size: 0.9rem;
     text-align: right;
+    flex-shrink: 0;
   }
 
   .item-pnl {
     font-size: 0.8rem;
     text-align: right;
+    flex-shrink: 0;
   }
 
   .expand-panel {

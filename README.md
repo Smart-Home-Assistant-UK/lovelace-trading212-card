@@ -1,6 +1,8 @@
 # Trading212 Lovelace Card
 
 [![GitHub release](https://img.shields.io/github/v/release/Smart-Home-Assistant-UK/lovelace-trading212-card)](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/releases)
+[![Tests](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/actions/workflows/test.yml/badge.svg)](https://github.com/Smart-Home-Assistant-UK/lovelace-trading212-card/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/Smart-Home-Assistant-UK/lovelace-trading212-card/graph/badge.svg)](https://codecov.io/gh/Smart-Home-Assistant-UK/lovelace-trading212-card)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
@@ -10,7 +12,7 @@ A Lovelace custom card for [Home Assistant](https://www.home-assistant.io/) that
 
 > **Requires the [Trading212 integration](https://github.com/Smart-Home-Assistant-UK/homeassistant-trading212)** to expose your portfolio as sensor entities.
 
-![Health Card](docs/screenshots/default/health-card.png)
+![Health Card](docs/screenshots/storybook/health-card.png)
 
 ---
 
@@ -99,6 +101,8 @@ positions:
     quantity: sensor.aapl_qty
     avg_price: sensor.aapl_avg
     current_price: sensor.aapl_price
+    daily_gain_loss: sensor.aapl_daily_pnl
+    daily_gain_loss_percent: sensor.aapl_daily_pnl_pct
 ```
 
 ---
@@ -172,31 +176,31 @@ pie: aggressive_but_safe
 
 ## Screenshots
 
-### Default theme
+Rendered from the project's Storybook with sample data (not a live account) — see `npm run storybook` under [Contributing](#contributing). Colours, backgrounds, and fonts come entirely from HA's CSS custom properties, so these adapt automatically to whatever theme you're running; there's no separate light/dark variant to maintain here.
 
 | Health | Overview |
 |--------|----------|
-| ![Health](docs/screenshots/default/health-card.png) | ![Overview](docs/screenshots/default/overview-card.png) |
+| ![Health](docs/screenshots/storybook/health-card.png) | ![Overview](docs/screenshots/storybook/overview-card.png) |
 
 | Positions | Positions expanded |
 |-----------|--------------------|
-| ![Positions](docs/screenshots/default/positions-card.png) | ![Positions expanded](docs/screenshots/default/positions-card-expanded.png) |
+| ![Positions](docs/screenshots/storybook/positions-card.png) | ![Positions expanded](docs/screenshots/storybook/positions-card-expanded.png) |
 
 | Pies | Pies expanded |
 |------|---------------|
-| ![Pies](docs/screenshots/default/pies-card.png) | ![Pies expanded](docs/screenshots/default/pies-card-expanded.png) |
+| ![Pies](docs/screenshots/storybook/pies-card.png) | ![Pies expanded](docs/screenshots/storybook/pies-card-expanded.png) |
+
+### Portfolio card
+
+![Portfolio card](docs/screenshots/storybook/portfolio-card.png)
 
 ### Allocation card
 
-All three modes side by side — pies overview, positions filtered to one pie, and all positions globally:
+All three modes — all positions, positions filtered to one pie, and pies overview:
 
-![Allocation card](docs/screenshots/default/allocation-card.png)
-
-### iOS dark theme
-
-| Health | Portfolio |
-|--------|-----------|
-| ![Health dark](docs/screenshots/ios-dark/health-card.png) | ![Portfolio dark](docs/screenshots/ios-dark/portfolio-card.png) |
+| Positions | Filtered to one pie | Pies |
+|-----------|---------------------|------|
+| ![Allocation positions](docs/screenshots/storybook/allocation-positions.png) | ![Allocation pie-filtered](docs/screenshots/storybook/allocation-pie-filtered.png) | ![Allocation pies](docs/screenshots/storybook/allocation-pies.png) |
 
 ---
 
@@ -206,7 +210,8 @@ All three modes side by side — pies overview, positions filtered to one pie, a
 - **Auto-discovery** — new positions and pies appear automatically without config changes
 - **Sparklines** — the health card shows a 7-day portfolio value trend; position rows show per-instrument history from the HA recorder
 - **Theming** — all colours and backgrounds use HA CSS custom properties and adapt to any theme automatically
-- **Unavailable sensors** — missing or stale entities render as `—` and never cause card errors
+- **Unavailable sensors** — entities that exist but are temporarily unavailable/unknown render as `—`
+- **Optional sensors** — the trading212 integration lets you pick which per-position and per-pie sensors to create; a position or pie shows up as soon as *any* of its sensors exist, and fields for sensors you haven't enabled are simply omitted (no `—` placeholders) rather than requiring every metric to be selected
 
 ---
 
@@ -217,7 +222,8 @@ npm install
 npm run build      # build dist/investment-card.js
 npm run dev        # Vite dev server
 npm run storybook  # visual component testing
-npm test           # unit tests (Vitest)
+npm test           # unit tests (Vitest + jsdom)
+npm run test:coverage  # unit tests with a coverage report
 ```
 
 ---
