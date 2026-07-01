@@ -64,7 +64,7 @@ function squarify(
   }
 }
 
-function computeTreemap(values: number[], w: number, h: number): Rect[] {
+export function computeTreemap(values: number[], w: number, h: number): Rect[] {
   if (!values.length || w <= 0 || h <= 0) return [];
   const total = values.reduce((s, v) => s + v, 0);
   if (total === 0) return values.map(() => ({ x: 0, y: 0, w: 0, h: 0 }));
@@ -79,19 +79,19 @@ function computeTreemap(values: number[], w: number, h: number): Rect[] {
 
 // --- Helpers ---
 
-function pnlBg(pct: number): string {
+export function pnlBg(pct: number): string {
   const abs = Math.min(Math.abs(pct) / 10, 1);
   const alpha = (0.12 + abs * 0.22).toFixed(2);
   return pct >= 0 ? `rgba(76,175,80,${alpha})` : `rgba(244,67,54,${alpha})`;
 }
 
-function avatarColor(ticker: string): string {
+export function avatarColor(ticker: string): string {
   let h = 0;
   for (let i = 0; i < ticker.length; i++) h = (h * 31 + ticker.charCodeAt(i)) & 0xffff;
   return `hsl(${(h * 137) % 360},50%,38%)`;
 }
 
-function displayTicker(ticker: string): string {
+export function displayTicker(ticker: string): string {
   // Strip Trading212 exchange suffixes like _EQ, _US_EQ, _UK, _L
   return ticker.replace(/[_\s]+(US[_\s]*)?EQ$/i, '').replace(/[_\s]+L$/i, '');
 }

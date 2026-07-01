@@ -175,7 +175,8 @@ npm install
 npm run build      # build dist/investment-card.js
 npm run dev        # Vite dev server
 npm run storybook  # visual component testing
-npm test           # unit tests (Vitest)
+npm test           # unit tests (Vitest + jsdom)
+npm run test:coverage  # unit tests with a coverage report
 ```
 
 ---
