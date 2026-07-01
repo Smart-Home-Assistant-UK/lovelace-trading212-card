@@ -10,7 +10,7 @@ A Lovelace custom card for [Home Assistant](https://www.home-assistant.io/) that
 
 > **Requires the [Trading212 integration](https://github.com/Smart-Home-Assistant-UK/homeassistant-trading212)** to expose your portfolio as sensor entities.
 
-![Health Card](docs/screenshots/default/health-card.png)
+![Health Card](docs/screenshots/storybook/health-card.png)
 
 ---
 
@@ -129,31 +129,31 @@ positions:
 
 ## Screenshots
 
-### Default theme
+Rendered from the project's Storybook with sample data (not a live account) — see `npm run storybook` under [Contributing](#contributing). Colours, backgrounds, and fonts come entirely from HA's CSS custom properties, so these adapt automatically to whatever theme you're running; there's no separate light/dark variant to maintain here.
 
 | Health | Overview |
 |--------|----------|
-| ![Health](docs/screenshots/default/health-card.png) | ![Overview](docs/screenshots/default/overview-card.png) |
+| ![Health](docs/screenshots/storybook/health-card.png) | ![Overview](docs/screenshots/storybook/overview-card.png) |
 
 | Positions | Positions expanded |
 |-----------|--------------------|
-| ![Positions](docs/screenshots/default/positions-card.png) | ![Positions expanded](docs/screenshots/default/positions-card-expanded.png) |
+| ![Positions](docs/screenshots/storybook/positions-card.png) | ![Positions expanded](docs/screenshots/storybook/positions-card-expanded.png) |
 
 | Pies | Pies expanded |
 |------|---------------|
-| ![Pies](docs/screenshots/default/pies-card.png) | ![Pies expanded](docs/screenshots/default/pies-card-expanded.png) |
+| ![Pies](docs/screenshots/storybook/pies-card.png) | ![Pies expanded](docs/screenshots/storybook/pies-card-expanded.png) |
+
+### Portfolio card
+
+![Portfolio card](docs/screenshots/storybook/portfolio-card.png)
 
 ### Allocation card
 
-All three modes side by side — pies overview, positions filtered to one pie, and all positions globally:
+All three modes — all positions, positions filtered to one pie, and pies overview:
 
-![Allocation card](docs/screenshots/default/allocation-card.png)
-
-### iOS dark theme
-
-| Health | Portfolio |
-|--------|-----------|
-| ![Health dark](docs/screenshots/ios-dark/health-card.png) | ![Portfolio dark](docs/screenshots/ios-dark/portfolio-card.png) |
+| Positions | Filtered to one pie | Pies |
+|-----------|---------------------|------|
+| ![Allocation positions](docs/screenshots/storybook/allocation-positions.png) | ![Allocation pie-filtered](docs/screenshots/storybook/allocation-pie-filtered.png) | ![Allocation pies](docs/screenshots/storybook/allocation-pies.png) |
 
 ---
 
